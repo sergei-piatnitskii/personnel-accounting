@@ -1,9 +1,10 @@
-version: "2.4"
+version: "3.8"
 
 services:
   db:
     image: mysql:8.0.28
     container_name: db
+    command: --port=3305 --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_DATABASE: personnel_accounting
       MYSQL_USER: admin
@@ -11,6 +12,12 @@ services:
       MYSQL_ROOT_PASSWORD: root
     ports:
       - "3305:3305"
+    healthcheck: 
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uadmin", "-padmin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   webapp:
     build: .
     container_name: personnel_accounting
@@ -18,6 +25,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
+      DATASOURCE_URL: jdbc:mysql://db:3305/personnel_accounting?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DATASOURCE_USERNAME: admin
+      DATASOURCE_PASSWORD: admin
       CATALINA_OPTS: "-Ddatasource.url=jdbc:mysql://db:3305/personnel_accounting -Ddatasource.username=admin -Ddatasource.password=admin"
